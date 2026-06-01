@@ -9,6 +9,7 @@ const adminAuditLogRoutes = require("./routes/adminAuditLogRoutes");
 const adminAuthRoutes = require("./routes/adminAuthRoutes");
 const adminUserRoutes = require("./routes/adminUserRoutes");
 const healthRoutes = require("./routes/healthRoutes");
+const partnerRoutes = require("./modules/partners/partner.routes");
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use("/health", healthRoutes);
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/admin/audit-logs", adminAuditLogRoutes);
+app.use("/api/v1/admin/partners", partnerRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

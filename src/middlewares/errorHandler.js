@@ -14,6 +14,7 @@ function errorHandler(error, req, res, next) {
 
   res.status(statusCode).json({
     success: false,
+    message: isServerError ? "Internal server error." : error.message,
     error: {
       message: isServerError ? "Internal server error." : error.message,
     },
