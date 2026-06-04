@@ -9,7 +9,6 @@ const partnerFields = {
   email: Joi.string().trim().lowercase().email().max(254),
   phone: Joi.string().trim().max(30).allow("", null),
   website: Joi.string().trim().uri({ scheme: ["http", "https"] }).max(2048).allow("", null),
-  allowedIps: Joi.array().items(Joi.string().trim().max(80)).max(100).default([]),
   status: Joi.string().valid("active", "inactive", "blocked"),
   notes: Joi.string().trim().max(2000).allow("", null),
 };
@@ -20,7 +19,6 @@ const createPartnerSchema = Joi.object({
   email: partnerFields.email.required(),
   phone: partnerFields.phone,
   website: partnerFields.website,
-  allowedIps: partnerFields.allowedIps,
   status: partnerFields.status.default("active"),
   notes: partnerFields.notes,
 }).unknown(false);
@@ -31,7 +29,6 @@ const updatePartnerSchema = Joi.object({
   email: partnerFields.email,
   phone: partnerFields.phone,
   website: partnerFields.website,
-  allowedIps: partnerFields.allowedIps,
   notes: partnerFields.notes,
 }).min(1).unknown(false);
 

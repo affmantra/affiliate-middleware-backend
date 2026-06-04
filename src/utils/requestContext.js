@@ -40,4 +40,4 @@ function getRequestContext(req) {
   };
 }
 
-module.exports = { getRequestContext, parseUserAgent };
+module.exports = { getClientIp, getRequestContext, parseUserAgent };

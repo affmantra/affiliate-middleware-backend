@@ -37,14 +37,6 @@ const partnerSchema = new mongoose.Schema(
       match: /^https?:\/\/.+/i,
       default: null,
     },
-    allowedIps: {
-      type: [String],
-      default: [],
-      validate: {
-        validator: (items) => items.length <= 100,
-        message: "A partner may have no more than 100 allowed IP entries.",
-      },
-    },
     apiKeyHash: {
       type: String,
       required: true,

@@ -4,6 +4,8 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const objectIdPattern = /^[a-f\d]{24}$/i;
 const roles = ["super_admin", "admin", "support"];
 const statuses = ["active", "blocked", "invited"];
+const apiLogMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
+const apiLogStatuses = ["received", "success", "failed", "rejected", "timeout"];
 
 function validateAdminLogin(req, res, next) {
   const { email, password } = req.body || {};
@@ -134,7 +136,76 @@ function validateAuditLogQuery(req, res, next) {
   return next();
 }
 
+function validateApiLogQuery(req, res, next) {
+  const submittedFields = Object.keys(req.query || {});
+  const allowedFields = [
+    "limit",
+    "page",
+    "search",
+    "method",
+    "status",
+    "statusCode",
+    "partnerId",
+  ];
+
+  if (submittedFields.some((field) => !allowedFields.includes(field))) {
+    return next(new AppError("Unexpected API log query field.", 400));
+  }
+
+  if (req.query.partnerId !== undefined && !objectIdPattern.test(req.query.partnerId)) {
+    return next(new AppError("Partner id is invalid.", 400));
+  }
+
+  if (req.query.method !== undefined) {
+    const method = String(req.query.method).toUpperCase();
+
+    if (!apiLogMethods.includes(method)) {
+      return next(new AppError("Method filter is invalid.", 400));
+    }
+
+    req.query.method = method;
+  }
+
+  if (req.query.status !== undefined && !apiLogStatuses.includes(req.query.status)) {
+    return next(new AppError("Status filter is invalid.", 400));
+  }
+
+  if (req.query.statusCode !== undefined) {
+    const statusCode = Number(req.query.statusCode);
+
+    if (!Number.isInteger(statusCode) || statusCode < 100 || statusCode > 599) {
+      return next(new AppError("Status code must be between 100 and 599.", 400));
+    }
+
+    req.query.statusCode = statusCode;
+  }
+
+  if (req.query.search !== undefined) {
+    if (typeof req.query.search !== "string" || req.query.search.length > 120) {
+      return next(new AppError("Search must be 120 characters or fewer.", 400));
+    }
+
+    req.query.search = req.query.search.trim();
+  }
+
+  const page = req.query.page === undefined ? 1 : Number(req.query.page);
+  const limit = req.query.limit === undefined ? 50 : Number(req.query.limit);
+
+  if (!Number.isInteger(page) || page < 1) {
+    return next(new AppError("Page must be a positive integer.", 400));
+  }
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    return next(new AppError("Limit must be an integer between 1 and 100.", 400));
+  }
+
+  req.query.page = page;
+  req.query.limit = limit;
+  return next();
+}
+
 module.exports = {
+  validateApiLogQuery,
   validateAuditLogQuery,
   validateAdminLogin,
   validateAdminUserId,

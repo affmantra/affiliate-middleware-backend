@@ -90,7 +90,6 @@ test("POST /api/v1/admin/partners creates partner and returns raw API key once",
       companyName: "Publisher Co",
       email: "publisher@example.com",
       website: "https://publisher.example.com",
-      allowedIps: ["203.0.113.10"],
     });
 
   assert.equal(response.status, 201);
@@ -138,7 +137,6 @@ test("GET /api/v1/admin/partners supports search, status, and pagination", async
                   name: "Publisher One",
                   companyName: "Publisher Co",
                   email: "publisher@example.com",
-                  allowedIps: [],
                   apiKeyPreview: "pk_live_xxxxx1234",
                   status: "active",
                   createdAt: new Date(),
@@ -180,7 +178,6 @@ test("PATCH /api/v1/admin/partners/:id/status updates partner status", async () 
       _id: query._id,
       name: "Publisher One",
       email: "publisher@example.com",
-      allowedIps: [],
       apiKeyPreview: "pk_live_xxxxx1234",
       status: update.status,
     };
@@ -209,7 +206,6 @@ test("POST /api/v1/admin/partners/:id/regenerate-api-key replaces API key hash",
       _id: query._id,
       name: "Publisher One",
       email: "publisher@example.com",
-      allowedIps: [],
       apiKeyHash: update.apiKeyHash,
       apiKeyPreview: update.apiKeyPreview,
       status: "active",

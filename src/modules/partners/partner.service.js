@@ -36,7 +36,6 @@ function serializePartner(partner) {
     email: source.email,
     phone: source.phone,
     website: source.website,
-    allowedIps: source.allowedIps || [],
     apiKeyPreview: source.apiKeyPreview,
     status: source.status,
     notes: source.notes,

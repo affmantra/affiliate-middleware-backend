@@ -18,17 +18,47 @@ const apiLogSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 180,
+      maxlength: 500,
     },
     method: {
       type: String,
       required: true,
-      enum: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     },
     direction: {
       type: String,
       required: true,
       enum: ["inbound", "outbound"],
+      default: "inbound",
+    },
+    headers: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    body: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    response: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    statusCode: {
+      type: Number,
+      min: 100,
+      max: 599,
+      default: null,
+    },
+    latency: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    ipAddress: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: null,
     },
     advertId: {
       type: String,
@@ -52,6 +82,7 @@ const apiLogSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: ["received", "success", "failed", "rejected", "timeout"],
+      default: "received",
     },
     httpStatus: {
       type: Number,
@@ -80,9 +111,12 @@ const apiLogSchema = new mongoose.Schema(
 
 apiLogSchema.index({ partnerId: 1, createdAt: -1 });
 apiLogSchema.index({ requestId: 1 }, { unique: true });
+apiLogSchema.index({ endpoint: 1, createdAt: -1 });
+apiLogSchema.index({ method: 1, createdAt: -1 });
 apiLogSchema.index({ advertId: 1, createdAt: -1 });
 apiLogSchema.index({ clickId: 1, createdAt: -1 });
 apiLogSchema.index({ status: 1, createdAt: -1 });
+apiLogSchema.index({ statusCode: 1, createdAt: -1 });
 apiLogSchema.index({ msisdnHash: 1, createdAt: -1 });
 apiLogSchema.index({ createdAt: -1 });
 apiLogSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
