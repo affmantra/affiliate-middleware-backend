@@ -1,4 +1,3 @@
-const test = require("node:test");
 const assert = require("node:assert/strict");
 const mongoose = require("mongoose");
 const request = require("supertest");
@@ -32,7 +31,7 @@ function makeAdmin(role = "admin") {
   };
 }
 
-test.afterEach(() => {
+afterEach(() => {
   Admin.findOne = originalAdminFindOne;
   Partner.find = originalPartnerFind;
   Partner.findOne = originalPartnerFindOne;

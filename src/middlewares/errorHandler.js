@@ -15,8 +15,11 @@ function errorHandler(error, req, res, next) {
   res.status(statusCode).json({
     success: false,
     message: isServerError ? "Internal server error." : error.message,
+    requestId: req.id,
+    statusCode,
     error: {
       message: isServerError ? "Internal server error." : error.message,
+      code: error.code || null,
     },
   });
 }

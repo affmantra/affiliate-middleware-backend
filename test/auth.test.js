@@ -1,4 +1,3 @@
-const test = require("node:test");
 const assert = require("node:assert/strict");
 const mongoose = require("mongoose");
 const request = require("supertest");
@@ -12,7 +11,7 @@ const { hashPassword } = require("../src/services/passwordService");
 
 const originalFindOne = Admin.findOne;
 
-test.afterEach(() => {
+afterEach(() => {
   Admin.findOne = originalFindOne;
 });
 

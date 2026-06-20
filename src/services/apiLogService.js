@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const mongoose = require("mongoose");
 const ApiLog = require("../models/apiLogModel");
+const { enqueueApiLog } = require("../queues/queueJobs");
 const { getClientIp } = require("../utils/requestContext");
 
 const MAX_JSON_BYTES = 24000;
@@ -125,18 +126,142 @@ function buildLogEntry(req, responseBody, startedAt) {
   };
 }
 
-function writeApiLogAsync(req, responseBody, startedAt) {
+function writeLogEntryDirect(logEntry, label = "API log") {
   if (mongoose.connection.readyState !== 1) {
-    return;
+    return Promise.resolve(false);
   }
 
-  const logEntry = buildLogEntry(req, responseBody, startedAt);
-
-  setImmediate(() => {
-    ApiLog.create(logEntry).catch((error) => {
-      console.error("Unable to write API log.", error);
+  return ApiLog.create(logEntry)
+    .then(() => true)
+    .catch((error) => {
+      console.error(`Unable to write ${label}.`, error);
+      return false;
     });
+}
+
+function enqueueOrWriteDirect(logEntry, label) {
+  setImmediate(async () => {
+    try {
+      const queued = await enqueueApiLog(logEntry);
+      if (!queued) {
+        await writeLogEntryDirect(logEntry, label);
+      }
+    } catch (error) {
+      console.error(`Unable to enqueue ${label}; falling back to direct write.`, error);
+      await writeLogEntryDirect(logEntry, label);
+    }
   });
+}
+
+function writeApiLogAsync(req, responseBody, startedAt) {
+  const logEntry = buildLogEntry(req, responseBody, startedAt);
+  enqueueOrWriteDirect(logEntry, "API log");
+}
+
+function buildOutboundLogEntry({
+  parentRequestId,
+  partnerId = null,
+  endpoint,
+  method = "POST",
+  headers = {},
+  body = null,
+  response = null,
+  statusCode = null,
+  latency = null,
+  ipAddress = null,
+  advertId = null,
+  clickId = null,
+  status,
+  errorCode = null,
+}) {
+  const safeStatusCode = statusCode || 500;
+  return {
+    partnerId,
+    parentRequestId,
+    requestId: crypto.randomUUID(),
+    endpoint,
+    method,
+    direction: "outbound",
+    headers: sanitizePayload(headers),
+    body: sanitizePayload(body),
+    response: sanitizePayload(response),
+    statusCode,
+    latency,
+    ipAddress,
+    advertId,
+    clickId,
+    status: status || getStatus(safeStatusCode),
+    httpStatus: statusCode,
+    durationMs: latency,
+    errorCode,
+  };
+}
+
+function writeOutboundApiLogAsync(payload) {
+  const logEntry = buildOutboundLogEntry(payload);
+  enqueueOrWriteDirect(logEntry, "outbound API log");
+}
+
+function getLogCategory(log) {
+  const endpoint = String(log.endpoint || "");
+
+  if (log.direction === "outbound") {
+    return "advertiser";
+  }
+
+  if (/^\/api\/v\d+\/(publisher|postback)(\/|$)/.test(endpoint)) {
+    return "partner";
+  }
+
+  if (/^\/api\/(admin|v\d+\/admin)(\/|$)/.test(endpoint)) {
+    return "frontend";
+  }
+
+  return "system";
+}
+
+function buildCategoryClause(category) {
+  if (!category || category === "all") {
+    return null;
+  }
+
+  if (category === "advertiser") {
+    return { direction: "outbound" };
+  }
+
+  if (category === "partner") {
+    return {
+      direction: "inbound",
+      endpoint: { $regex: "^/api/v[0-9]+/(publisher|postback)(/|$)" },
+    };
+  }
+
+  if (category === "frontend") {
+    return {
+      direction: "inbound",
+      endpoint: { $regex: "^/api/(admin|v[0-9]+/admin)(/|$)" },
+    };
+  }
+
+  return null;
+}
+
+function buildDateRangeFilter(dateFrom, dateTo) {
+  if (!dateFrom && !dateTo) {
+    return null;
+  }
+
+  const createdAt = {};
+
+  if (dateFrom) {
+    createdAt.$gte = new Date(`${dateFrom}T00:00:00.000`);
+  }
+
+  if (dateTo) {
+    createdAt.$lte = new Date(`${dateTo}T23:59:59.999`);
+  }
+
+  return { createdAt };
 }
 
 async function listApiLogs({
@@ -147,20 +272,44 @@ async function listApiLogs({
   status,
   statusCode,
   partnerId,
+  direction,
+  category,
+  dateFrom,
+  dateTo,
 } = {}) {
   const filter = {};
+  const clauses = [];
 
   if (method) filter.method = method;
   if (status) filter.status = status;
   if (statusCode) filter.statusCode = statusCode;
   if (partnerId) filter.partnerId = partnerId;
+  if (direction) filter.direction = direction;
+
+  const categoryClause = buildCategoryClause(category);
+  if (categoryClause) {
+    clauses.push(categoryClause);
+  }
+
+  const dateRangeFilter = buildDateRangeFilter(dateFrom, dateTo);
+  if (dateRangeFilter) {
+    Object.assign(filter, dateRangeFilter);
+  }
 
   if (search) {
-    filter.$or = [
-      { endpoint: { $regex: search, $options: "i" } },
-      { requestId: { $regex: search, $options: "i" } },
-      { ipAddress: { $regex: search, $options: "i" } },
-    ];
+    clauses.push({
+      $or: [
+        { endpoint: { $regex: search, $options: "i" } },
+        { requestId: { $regex: search, $options: "i" } },
+        { ipAddress: { $regex: search, $options: "i" } },
+      ],
+    });
+  }
+
+  if (clauses.length === 1) {
+    Object.assign(filter, clauses[0]);
+  } else if (clauses.length > 1) {
+    filter.$and = clauses;
   }
 
   const skip = (page - 1) * limit;
@@ -170,7 +319,7 @@ async function listApiLogs({
       .skip(skip)
       .limit(limit)
       .select(
-        "requestId endpoint method headers body response status statusCode latency ipAddress partnerId createdAt",
+        "requestId parentRequestId endpoint method direction headers body response status statusCode latency ipAddress partnerId createdAt",
       )
       .lean(),
     ApiLog.countDocuments(filter),
@@ -180,8 +329,11 @@ async function listApiLogs({
     logs: logs.map((log) => ({
       id: log._id,
       requestId: log.requestId,
+      parentRequestId: log.parentRequestId,
+      category: getLogCategory(log),
       endpoint: log.endpoint,
       method: log.method,
+      direction: log.direction,
       headers: log.headers,
       body: log.body,
       response: log.response,
@@ -201,4 +353,10 @@ async function listApiLogs({
   };
 }
 
-module.exports = { listApiLogs, sanitizePayload, writeApiLogAsync };
+module.exports = {
+  listApiLogs,
+  sanitizePayload,
+  writeLogEntryDirect,
+  writeApiLogAsync,
+  writeOutboundApiLogAsync,
+};

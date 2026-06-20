@@ -1,4 +1,3 @@
-const test = require("node:test");
 const assert = require("node:assert/strict");
 const mongoose = require("mongoose");
 const request = require("supertest");
@@ -20,7 +19,7 @@ function adminCookie(admin) {
   return `${process.env.AUTH_COOKIE_NAME}=${token}`;
 }
 
-test.afterEach(() => {
+afterEach(() => {
   Admin.find = originalFind;
   Admin.findOne = originalFindOne;
   Admin.findOneAndUpdate = originalFindOneAndUpdate;

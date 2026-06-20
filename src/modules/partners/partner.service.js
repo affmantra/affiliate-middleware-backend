@@ -82,6 +82,16 @@ async function getPartnerDetails(partnerId) {
   return serializePartner(partner);
 }
 
+async function getPartnerByApiKey(apiKey) {
+  const partner = await partnerRepository.findPartnerByApiKeyHash(hashApiKey(apiKey));
+
+  if (!partner) {
+    throw new AppError("API key is invalid.", 401);
+  }
+
+  return serializePartner(partner);
+}
+
 async function listPartners(options) {
   const result = await partnerRepository.listPartners(options);
 
@@ -150,6 +160,7 @@ async function regenerateApiKey(partnerId, adminId) {
 
 module.exports = {
   createPartner,
+  getPartnerByApiKey,
   getPartnerDetails,
   hashApiKey,
   listPartners,

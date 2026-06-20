@@ -39,6 +39,10 @@ async function findPartnerById(id) {
   return Partner.findOne({ _id: id, deletedAt: null });
 }
 
+async function findPartnerByApiKeyHash(apiKeyHash) {
+  return Partner.findOne({ apiKeyHash, deletedAt: null }).select("+apiKeyHash");
+}
+
 async function listPartners(options) {
   const page = options.page;
   const limit = options.limit;
@@ -78,6 +82,7 @@ module.exports = {
   createPartner,
   findPartnerByEmail,
   findPartnerByEmailExcludingId,
+  findPartnerByApiKeyHash,
   findPartnerById,
   listPartners,
   updatePartnerById,

@@ -30,6 +30,13 @@ const subscriptionSchema = new mongoose.Schema(
       trim: true,
       maxlength: 150,
     },
+    productId: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 40,
+      default: "1",
+    },
     msisdn: {
       type: String,
       required: true,
@@ -49,6 +56,22 @@ const subscriptionSchema = new mongoose.Schema(
       required: true,
       trim: true,
       maxlength: 150,
+    },
+    operator: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: null,
+    },
+    redirectUrl: {
+      type: String,
+      trim: true,
+      maxlength: 2048,
+      default: null,
+    },
+    responseData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     status: {
       type: String,
@@ -74,6 +97,8 @@ subscriptionSchema.index({ sessionId: 1 });
 subscriptionSchema.index({ provider: 1, providerReference: 1 }, { unique: true });
 subscriptionSchema.index({ advertId: 1, createdAt: -1 });
 subscriptionSchema.index({ clickId: 1, createdAt: -1 });
+subscriptionSchema.index({ productId: 1, createdAt: -1 });
+subscriptionSchema.index({ partnerId: 1, productId: 1, clickId: 1 });
 subscriptionSchema.index({ msisdn: 1, createdAt: -1 });
 subscriptionSchema.index({ status: 1, createdAt: -1 });
 subscriptionSchema.index({ createdAt: -1 });

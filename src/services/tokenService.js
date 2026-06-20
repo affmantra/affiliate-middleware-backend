@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { env } = require("../config/env");
 
 function authCookieOptions() {
@@ -15,14 +16,22 @@ function generateAccessToken(admin) {
     { role: admin.role },
     env.jwtSecret,
     {
+      algorithm: "HS256",
+      audience: env.jwtAudience,
       expiresIn: env.jwtExpiresIn,
+      issuer: env.jwtIssuer,
+      jwtid: crypto.randomUUID(),
       subject: admin._id.toString(),
     },
   );
 }
 
 function verifyAccessToken(token) {
-  return jwt.verify(token, env.jwtSecret);
+  return jwt.verify(token, env.jwtSecret, {
+    algorithms: ["HS256"],
+    audience: env.jwtAudience,
+    issuer: env.jwtIssuer,
+  });
 }
 
 function setAuthCookie(res, token) {

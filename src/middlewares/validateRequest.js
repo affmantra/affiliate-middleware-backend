@@ -6,6 +6,9 @@ const roles = ["super_admin", "admin", "support"];
 const statuses = ["active", "blocked", "invited"];
 const apiLogMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
 const apiLogStatuses = ["received", "success", "failed", "rejected", "timeout"];
+const apiLogDirections = ["inbound", "outbound"];
+const apiLogCategories = ["all", "partner", "frontend", "advertiser"];
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 function validateAdminLogin(req, res, next) {
   const { email, password } = req.body || {};
@@ -146,6 +149,10 @@ function validateApiLogQuery(req, res, next) {
     "status",
     "statusCode",
     "partnerId",
+    "direction",
+    "category",
+    "dateFrom",
+    "dateTo",
   ];
 
   if (submittedFields.some((field) => !allowedFields.includes(field))) {
@@ -170,6 +177,14 @@ function validateApiLogQuery(req, res, next) {
     return next(new AppError("Status filter is invalid.", 400));
   }
 
+  if (req.query.direction !== undefined && !apiLogDirections.includes(req.query.direction)) {
+    return next(new AppError("Direction filter is invalid.", 400));
+  }
+
+  if (req.query.category !== undefined && !apiLogCategories.includes(req.query.category)) {
+    return next(new AppError("Category filter is invalid.", 400));
+  }
+
   if (req.query.statusCode !== undefined) {
     const statusCode = Number(req.query.statusCode);
 
@@ -186,6 +201,21 @@ function validateApiLogQuery(req, res, next) {
     }
 
     req.query.search = req.query.search.trim();
+  }
+
+  for (const field of ["dateFrom", "dateTo"]) {
+    if (req.query[field] !== undefined && !datePattern.test(req.query[field])) {
+      return next(new AppError(`${field} must be in YYYY-MM-DD format.`, 400));
+    }
+  }
+
+  if (req.query.dateFrom && req.query.dateTo) {
+    const dateFrom = new Date(`${req.query.dateFrom}T00:00:00`);
+    const dateTo = new Date(`${req.query.dateTo}T00:00:00`);
+
+    if (dateFrom > dateTo) {
+      return next(new AppError("dateFrom cannot be after dateTo.", 400));
+    }
   }
 
   const page = req.query.page === undefined ? 1 : Number(req.query.page);

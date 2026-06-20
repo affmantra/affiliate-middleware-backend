@@ -25,6 +25,13 @@ const leadSchema = new mongoose.Schema(
       trim: true,
       maxlength: 150,
     },
+    productId: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 40,
+      default: "1",
+    },
     msisdn: {
       type: String,
       required: true,
@@ -44,6 +51,14 @@ const leadSchema = new mongoose.Schema(
       trim: true,
       maxlength: 150,
       default: null,
+    },
+    requestData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    responseData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     status: {
       type: String,
@@ -70,6 +85,8 @@ const leadSchema = new mongoose.Schema(
 leadSchema.index({ partnerId: 1, createdAt: -1 });
 leadSchema.index({ sessionId: 1 });
 leadSchema.index({ partnerId: 1, clickId: 1 });
+leadSchema.index({ partnerId: 1, productId: 1, clickId: 1 });
+leadSchema.index({ productId: 1, createdAt: -1 });
 leadSchema.index({ advertId: 1, createdAt: -1 });
 leadSchema.index({ clickId: 1, createdAt: -1 });
 leadSchema.index({ msisdn: 1, createdAt: -1 });

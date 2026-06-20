@@ -14,6 +14,12 @@ const apiLogSchema = new mongoose.Schema(
       trim: true,
       maxlength: 100,
     },
+    parentRequestId: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: null,
+    },
     endpoint: {
       type: String,
       required: true,
@@ -111,6 +117,8 @@ const apiLogSchema = new mongoose.Schema(
 
 apiLogSchema.index({ partnerId: 1, createdAt: -1 });
 apiLogSchema.index({ requestId: 1 }, { unique: true });
+apiLogSchema.index({ parentRequestId: 1, createdAt: -1 });
+apiLogSchema.index({ direction: 1, createdAt: -1 });
 apiLogSchema.index({ endpoint: 1, createdAt: -1 });
 apiLogSchema.index({ method: 1, createdAt: -1 });
 apiLogSchema.index({ advertId: 1, createdAt: -1 });
